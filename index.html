@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Advanced Clicks Per Second Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-image: url('https://i.pinimg.com/originals/e5/ad/6e/e5ad6e2c2c8f9c855715b4c098f645b6.gif');
+            background-color: #f0f0f0;
+            text-align: center;
+            margin: 0;
+            padding: 0;
+        }
+        #container {
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #ffffff;
+            border-radius: 10px;
+            box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.2);
+        }
+        h1 {
+            color: #333;
+        }
+        #settings {
+            margin-top: 20px;
+        }
+        label {
+            font-weight: bold;
+        }
+        input[type="number"] {
+            width: 50px;
+            padding: 5px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+        }
+        #click-area {
+            width: 200px;
+            height: 200px;
+            background-color: #3498db;
+            margin: 0 auto;
+            margin-top: 20px;
+            border-radius: 10px;
+            cursor: pointer;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 24px;
+            color: #ffffff;
+            user-select: none;
+        }
+        #leaderboard {
+            margin-top: 20px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        th, td {
+            padding: 10px;
+            text-align: center;
+        }
+        th {
+            background-color: #3498db;
+            color: #ffffff;
+        }
+        tr:nth-child(even) {
+            background-color: #f2f2f2;
+        }
+    </style>
+</head>
+<body>
+    <div id="container">
+        <h1>Advanced Clicks Per Second Test</h1>
+        <div id="settings">
+            <label for="duration">Test Duration (seconds): </label>
+            <input type="number" id="duration" value="10" min="1" step="1">
+        </div>
+        <div id="click-area">
+            <p id="cps-counter">Click to Start</p>
+        </div>
+        <p>Time Left: <span id="time-left">10</span> seconds</p>
+        <div id="leaderboard">
+            <h2>Leaderboard</h2>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Rank</th>
+                        <th>Name</th>
+                        <th>CPS</th>
+                    </tr>
+                </thead>
+                <tbody id="leaderboard-body">
+                    <!-- Leaderboard data will be populated here -->
+                </tbody>
+            </table>
+        </div>
+    </div>
+    <script>
+        let cps = 0;
+        let clicks = 0;
+        let timeLeft = 10;
+        let countdown;
+        let leaderboardData = [];
+        let testRunning = false;
+        let playerName = null;
+
+        // Function to start the test
+        function startTest() {
+            if (testRunning) return;
+
+            if (playerName === null) {
+                playerName = prompt("Enter your name for the leaderboard:");
+                if (!playerName) {
+                    return; // If the user cancels, don't start the test
+                }
+            }
+
+            const duration = parseInt(document.getElementById("duration").value);
+            if (isNaN(duration) || duration <= 0) {
+                alert("Please enter a valid test duration.");
+                return;
+            }
+
+            document.getElementById("settings").style.display = "none";
+            document.getElementById("duration").disabled = true;
+
+            timeLeft = duration;
+            clicks = 0;
+            cps = 0;
+            updateCPS();
+
+            countdown = setInterval(() => {
+                timeLeft--;
+                document.getElementById("time-left").textContent = timeLeft;
+
+                if (timeLeft === 0) {
+                    clearInterval(countdown);
+                    endTest();
+                } else {
+                    cps = clicks / (duration - timeLeft);
+                    updateCPS();
+                }
+            }, 1000);
+
+            testRunning = true;
+        }
+
+        // Function to end the test
+        function endTest() {
+            if (playerName) {
+                leaderboardData.push({ name: playerName, cps });
+                leaderboardData.sort((a, b) => b.cps - a.cps); // Sort by CPS in descending order
+                updateLeaderboard();
+                saveLeaderboard();
+            }
+            resetTest();
+        }
+
+        // Function to reset the test
+        function resetTest() {
+            document.getElementById("settings").style.display = "block";
+            document.getElementById("duration").disabled = false;
+
+            clearInterval(countdown);
+            document.getElementById("duration").value = "10";
+            document.getElementById("cps-counter").textContent = "0 CPS";
+            document.getElementById("time-left").textContent = "10";
+            clicks = 0;
+            cps = 0;
+            testRunning = false;
+        }
+
+        // Function to update CPS display
+        function updateCPS() {
+            document.getElementById("cps-counter").textContent = cps.toFixed(2) + " CPS";
+        }
+
+        // Function to update the leaderboard
+        function updateLeaderboard() {
+            const leaderboardBody = document.getElementById("leaderboard-body");
+            leaderboardBody.innerHTML = "";
+
+            leaderboardData.slice(0, 5).forEach((entry, index) => {
+                const row = document.createElement("tr");
+                row.innerHTML = `
+                    <td>${index + 1}</td>
+                    <td>${entry.name}</td>
+                    <td>${entry.cps.toFixed(2)}</td>
+                `;
+                leaderboardBody.appendChild(row);
+            });
+        }
+
+        // Function to save leaderboard data to local storage
+        function saveLeaderboard() {
+            localStorage.setItem("leaderboardData", JSON.stringify(leaderboardData));
+        }
+
+        // Function to load leaderboard data from local storage
+        function loadLeaderboard() {
+            const storedData = localStorage.getItem("leaderboardData");
+            if (storedData) {
+                leaderboardData = JSON.parse(storedData);
+                updateLeaderboard();
+            }
+        }
+
+        // Load leaderboard data when the page loads
+        loadLeaderboard();
+
+        // Event listener for clicks
+        document.getElementById("click-area").addEventListener("click", () => {
+            if (testRunning) {
+                clicks++;
+                updateCPS();
+            } else {
+                startTest();
+            }
+        });
+
+        // Function to clear leaderboard data
+        function AdminClear() {
+            leaderboardData = [];
+            updateLeaderboard();
+            saveLeaderboard();
+            console.log("Leaderboard data has been cleared.");
+        }
+
+        // Function to add a fake entry
+        function AdminRecord(name, cps) {
+            leaderboardData.push({ name, cps });
+            leaderboardData.sort((a, b) => b.cps - a.cps); // Sort by CPS in descending order
+            updateLeaderboard();
+            saveLeaderboard();
+        }
+
+        // Function to delete a specific record by rank number
+        function AdminRecordDelete(rank) {
+            if (rank > 0 && rank <= leaderboardData.length) {
+                leaderboardData.splice(rank - 1, 1);
+                updateLeaderboard();
+                saveLeaderboard();
+                console.log(`Record at rank ${rank} has been deleted.`);
+            } else {
+                console.log("Invalid rank number.");
+            }
+        }
+    </script>
+</body>
+</html>
